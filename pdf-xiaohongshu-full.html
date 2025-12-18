@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF转小红书图片编辑器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 6px;
+            font-size: 1.8rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 16px;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            height: fit-content;
+            position: sticky;
+            top: 16px;
+            max-height: calc(100vh - 32px);
+            overflow-y: auto;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #ddd;
+            border-radius: 3px;
+        }
+
+        .canvas-area {
+            background: white;
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            min-height: 500px;
+        }
+
+        .section {
+            margin-bottom: 14px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #ff6b6b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 3px;
+            height: 12px;
+            background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+            border-radius: 2px;
+        }
+
+        .upload-area {
+            border: 2px dashed #ffcece;
+            border-radius: 10px;
+            padding: 20px 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fffafa;
+        }
+
+        .upload-area:hover {
+            border-color: #ff6b6b;
+            background: #fff5f5;
+        }
+
+        .upload-icon {
+            font-size: 32px;
+            margin-bottom: 6px;
+        }
+
+        .upload-text {
+            color: #888;
+            font-size: 12px;
+        }
+
+        .upload-text strong {
+            color: #ff6b6b;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 4px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 7px 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #ff6b6b;
+            box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.15);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 50px;
+        }
+
+        .color-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        input[type="color"] {
+            width: 36px;
+            height: 30px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            padding: 2px;
+        }
+
+        .color-row input[type="text"] {
+            flex: 1;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 9px 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #555;
+        }
+
+        .btn-secondary:hover {
+            background: #eee;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+        }
+
+        /* 尺寸预设 */
+        .size-presets {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+
+        .size-preset {
+            padding: 4px 9px;
+            background: #f8f8f8;
+            border: 1px solid #e8e8e8;
+            border-radius: 15px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .size-preset:hover {
+            border-color: #ff6b6b;
+        }
+
+        .size-preset.active {
+            background: #ff6b6b;
+            color: white;
+            border-color: #ff6b6b;
+        }
+
+        .custom-size-row {
+            display: none;
+            gap: 6px;
+            align-items: center;
+            margin-top: 6px;
+        }
+
+        .custom-size-row.show {
+            display: flex;
+        }
+
+        .custom-size-row input {
+            width: 70px;
+        }
+
+        .custom-size-row span {
+            color: #999;
+            font-size: 12px;
+        }
+
+        /* 布局选择 */
+        .layout-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 6px;
+        }
+
+        .layout-item {
+            aspect-ratio: 3/4;
+            border: 2px solid #eee;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            background: #fafafa;
+        }
+
+        .layout-item:hover {
+            border-color: #ff6b6b;
+        }
+
+        .layout-item.active {
+            border-color: #ff6b6b;
+            background: #fff5f5;
+        }
+
+        .layout-preview {
+            width: 100%;
+            flex: 1;
+            display: grid;
+            gap: 1px;
+        }
+
+        .layout-preview div {
+            background: #ff6b6b;
+            border-radius: 1px;
+            opacity: 0.5;
+        }
+
+        .layout-item.active .layout-preview div {
+            opacity: 1;
+        }
+
+        .layout-label {
+            font-size: 9px;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        /* 页面网格 */
+        .page-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+            max-height: 160px;
+            overflow-y: auto;
+            padding: 2px;
+        }
+
+        .page-thumb {
+            aspect-ratio: 3/4;
+            border: 2px solid #eee;
+            border-radius: 5px;
+            cursor: pointer;
+            overflow: hidden;
+            position: relative;
+            transition: all 0.2s;
+            background: #f5f5f5;
+        }
+
+        .page-thumb:hover {
+            border-color: #ff9999;
+        }
+
+        .page-thumb.selected {
+            border-color: #ff6b6b;
+            box-shadow: 0 0 0 2px rgba(255,107,107,0.25);
+        }
+
+        .page-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .page-num {
+            position: absolute;
+            bottom: 1px;
+            right: 1px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            font-size: 8px;
+            padding: 1px 3px;
+            border-radius: 2px;
+        }
+
+        .page-order {
+            position: absolute;
+            top: 1px;
+            left: 1px;
+            background: #ff6b6b;
+            color: white;
+            font-size: 9px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        /* 输出区域 */
+        .output-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            justify-content: center;
+        }
+
+        .output-item {
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .canvas-wrap {
+            position: relative;
+            display: inline-block;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .output-canvas {
+            display: block;
+            max-height: 65vh;
+            width: auto;
+            cursor: crosshair;
+        }
+
+        .output-label {
+            margin-top: 6px;
+            font-size: 11px;
+            color: #888;
+        }
+
+        .placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 350px;
+            color: #bbb;
+        }
+
+        .placeholder-icon {
+            font-size: 56px;
+            margin-bottom: 12px;
+        }
+
+        /* 文字列表 */
+        .text-list {
+            max-height: 100px;
+            overflow-y: auto;
+            margin-top: 6px;
+        }
+
+        .text-entry {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 7px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            margin-bottom: 4px;
+            font-size: 10px;
+        }
+
+        .text-entry-content {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-right: 6px;
+        }
+
+        .text-entry-btn {
+            padding: 2px 5px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 9px;
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .range-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .range-row input[type="range"] {
+            flex: 1;
+        }
+
+        .range-val {
+            min-width: 38px;
+            text-align: center;
+            font-size: 11px;
+            color: #666;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+        }
+
+        .checkbox-row input {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* 提示框 */
+        .tip-box {
+            background: #fffbeb;
+            border-left: 3px solid #f59e0b;
+            padding: 8px 10px;
+            border-radius: 0 6px 6px 0;
+            font-size: 10px;
+            color: #92400e;
+            line-height: 1.5;
+            margin-top: 10px;
+        }
+
+        /* 编辑模式指示器 */
+        .edit-mode-bar {
+            position: fixed;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff6b6b;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 25px;
+            font-size: 12px;
+            font-weight: 600;
+            box-shadow: 0 4px 20px rgba(255,107,107,0.5);
+            z-index: 100;
+            display: none;
+            animation: pulse 1.5s infinite;
+        }
+
+        .edit-mode-bar.active {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.03); }
+        }
+
+        /* 加载遮罩 */
+        .loading-mask {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-mask.active {
+            display: flex;
+        }
+
+        .loading-box {
+            background: white;
+            padding: 28px 44px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 4px solid #f0f0f0;
+            border-top-color: #ff6b6b;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 14px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .progress-track {
+            width: 180px;
+            height: 5px;
+            background: #eee;
+            border-radius: 3px;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        @media (max-width: 960px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                position: static;
+                max-height: none;
+            }
+        }
+
+        /* 步骤指示 */
+        .steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            position: relative;
+        }
+
+        .steps::before {
+            content: '';
+            position: absolute;
+            top: 12px;
+            left: 24px;
+            right: 24px;
+            height: 2px;
+            background: #eee;
+            z-index: 0;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .step-num {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #eee;
+            color: #999;
+            font-size: 11px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .step.active .step-num {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .step.done .step-num {
+            background: #10b981;
+            color: white;
+        }
+
+        .step-label {
+            font-size: 9px;
+            color: #999;
+        }
+
+        .step.active .step-label,
+        .step.done .step-label {
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📕 PDF 转小红书图片</h1>
+        <p class="subtitle">上传 PDF → 选择布局 → 拼接页面 → 添加文字 → 导出图片</p>
+        
+        <div class="main-content">
+            <div class="sidebar">
+                <!-- 步骤指示 -->
+                <div class="steps">
+                    <div class="step active" id="step1">
+                        <div class="step-num">1</div>
+                        <div class="step-label">上传</div>
+                    </div>
+                    <div class="step" id="step2">
+                        <div class="step-num">2</div>
+                        <div class="step-label">设置</div>
+                    </div>
+                    <div class="step" id="step3">
+                        <div class="step-num">3</div>
+                        <div class="step-label">生成</div>
+                    </div>
+                    <div class="step" id="step4">
+                        <div class="step-num">4</div>
+                        <div class="step-label">文字</div>
+                    </div>
+                    <div class="step" id="step5">
+                        <div class="step-num">5</div>
+                        <div class="step-label">导出</div>
+                    </div>
+                </div>
+
+                <!-- 1. 上传 PDF -->
+                <div class="section" id="uploadSection">
+                    <div class="section-title">① 上传 PDF</div>
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">📄</div>
+                        <div class="upload-text">拖拽或<strong>点击上传</strong></div>
+                        <input type="file" id="fileInput" accept=".pdf">
+                    </div>
+                    <div id="fileInfo" style="margin-top:8px;font-size:11px;color:#666;display:none;"></div>
+                </div>
+
+                <!-- 2. 图片尺寸 -->
+                <div class="section" id="sizeSection" style="display:none;">
+                    <div class="section-title">② 图片尺寸</div>
+                    <div class="size-presets" id="sizePresets">
+                        <span class="size-preset active" data-w="1242" data-h="1660">小红书竖版</span>
+                        <span class="size-preset" data-w="1242" data-h="1242">小红书方形</span>
+                        <span class="size-preset" data-w="1080" data-h="1920">手机壁纸</span>
+                        <span class="size-preset" data-w="0" data-h="0">自定义</span>
+                    </div>
+                    <div class="custom-size-row" id="customSizeRow">
+                        <input type="number" id="customW" value="1242" min="100" max="5000">
+                        <span>×</span>
+                        <input type="number" id="customH" value="1660" min="100" max="5000">
+                        <span>px</span>
+                    </div>
+                </div>
+
+                <!-- 3. 页面布局 -->
+                <div class="section" id="layoutSection" style="display:none;">
+                    <div class="section-title">③ 页面布局</div>
+                    <div class="layout-grid" id="layoutGrid">
+                        <div class="layout-item active" data-layout="1" data-cols="1" data-rows="1">
+                            <div class="layout-preview" style="grid-template-columns:1fr;"><div></div></div>
+                            <span class="layout-label">1页</span>
+                        </div>
+                        <div class="layout-item" data-layout="2" data-cols="1" data-rows="2">
+                            <div class="layout-preview" style="grid-template-columns:1fr;grid-template-rows:1fr 1fr;"><div></div><div></div></div>
+                            <span class="layout-label">2页</span>
+                        </div>
+                        <div class="layout-item" data-layout="3" data-cols="1" data-rows="3">
+                            <div class="layout-preview" style="grid-template-columns:1fr;grid-template-rows:1fr 1fr 1fr;"><div></div><div></div><div></div></div>
+                            <span class="layout-label">3页</span>
+                        </div>
+                        <div class="layout-item" data-layout="4" data-cols="2" data-rows="2">
+                            <div class="layout-preview" style="grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;"><div></div><div></div><div></div><div></div></div>
+                            <span class="layout-label">4页</span>
+                        </div>
+                        <div class="layout-item" data-layout="6" data-cols="2" data-rows="3">
+                            <div class="layout-preview" style="grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr 1fr;"><div></div><div></div><div></div><div></div><div></div><div></div></div>
+                            <span class="layout-label">6页</span>
+                        </div>
+                        <div class="layout-item" data-layout="9" data-cols="3" data-rows="3">
+                            <div class="layout-preview" style="grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+                            <span class="layout-label">9页</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top:10px;">
+                        <label>页面间距</label>
+                        <div class="range-row">
+                            <input type="range" id="gapRange" min="0" max="60" value="12">
+                            <span class="range-val" id="gapVal">12px</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>背景颜色</label>
+                        <div class="color-row">
+                            <input type="color" id="bgColorPicker" value="#ffffff">
+                            <input type="text" id="bgColorText" value="#ffffff" maxlength="7">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. 选择页面 -->
+                <div class="section" id="pageSection" style="display:none;">
+                    <div class="section-title">④ 选择页面 <span id="selCount">(0/0)</span></div>
+                    <div class="btn-group" style="margin-bottom:8px;">
+                        <button class="btn btn-secondary" id="selAllBtn">全选</button>
+                        <button class="btn btn-secondary" id="clearSelBtn">清除</button>
+                    </div>
+                    <div class="page-grid" id="pageGrid"></div>
+                    <button class="btn btn-primary" id="generateBtn" style="margin-top:10px;" disabled>
+                        🎨 生成拼接图片
+                    </button>
+                </div>
+
+                <!-- 5. 添加文字 -->
+                <div class="section" id="textSection" style="display:none;">
+                    <div class="section-title">⑤ 添加文字</div>
+
+                    <div class="form-group">
+                        <label>目标图片</label>
+                        <select id="targetCanvas"></select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>文字内容</label>
+                        <textarea id="textInput" placeholder="输入文字内容..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>字体</label>
+                        <select id="fontSelect">
+                            <option value="Microsoft YaHei">微软雅黑</option>
+                            <option value="SimHei">黑体</option>
+                            <option value="SimSun">宋体</option>
+                            <option value="KaiTi">楷体</option>
+                            <option value="FangSong">仿宋</option>
+                            <option value="Arial">Arial</option>
+                            <option value="Georgia">Georgia</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                            <option value="Verdana">Verdana</option>
+                            <option value="Impact">Impact</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>字号</label>
+                        <div class="range-row">
+                            <input type="range" id="fontSizeRange" min="12" max="150" value="40">
+                            <span class="range-val" id="fontSizeVal">40px</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>文字颜色</label>
+                        <div class="color-row">
+                            <input type="color" id="fontColorPicker" value="#000000">
+                            <input type="text" id="fontColorText" value="#000000" maxlength="7">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>文字背景</label>
+                        <div class="color-row">
+                            <input type="color" id="textBgColorPicker" value="#ffffff">
+                            <input type="text" id="textBgColorText" value="#ffffff" maxlength="7">
+                        </div>
+                        <div class="checkbox-row" style="margin-top:4px;">
+                            <input type="checkbox" id="enableTextBg">
+                            <label for="enableTextBg">启用背景</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="boldCheck">
+                            <label for="boldCheck">粗体</label>
+                        </div>
+                        <div class="checkbox-row" style="margin-top:4px;">
+                            <input type="checkbox" id="italicCheck">
+                            <label for="italicCheck">斜体</label>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" id="addTextBtn">✏️ 点击图片添加文字</button>
+
+                    <div class="text-list" id="textList">
+                        <div style="color:#aaa;font-size:10px;text-align:center;padding:10px;">暂无文字</div>
+                    </div>
+
+                    <button class="btn btn-secondary" id="clearTextBtn" style="margin-top:6px;">🗑️ 清除当前图片文字</button>
+                </div>
+
+                <!-- 6. 导出 -->
+                <div class="section" id="exportSection" style="display:none;">
+                    <div class="section-title">⑥ 导出图片</div>
+                    <div class="btn-group">
+                        <button class="btn btn-success" id="dlPngBtn">📷 PNG</button>
+                        <button class="btn btn-success" id="dlJpgBtn">🖼️ JPG</button>
+                    </div>
+                    <button class="btn btn-secondary" id="resetBtn" style="margin-top:8px;">🔄 重新开始</button>
+                </div>
+
+                <div class="tip-box">
+                    💡 <strong>操作提示</strong><br>
+                    • 点击页面缩略图选择/取消，数字为拼接顺序<br>
+                    • 点击"添加文字"后在图片上点击放置<br>
+                    • 可拖动已添加的文字调整位置
+                </div>
+            </div>
+
+            <div class="canvas-area">
+                <div class="placeholder" id="placeholder">
+                    <div class="placeholder-icon">📕</div>
+                    <div>上传 PDF 文件开始制作</div>
+                </div>
+                <div class="output-wrapper" id="outputWrapper"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="edit-mode-bar" id="editModeBar">✏️ 点击图片放置文字 (ESC 取消)</div>
+
+    <div class="loading-mask" id="loadingMask">
+        <div class="loading-box">
+            <div class="spinner"></div>
+            <div id="loadingMsg">处理中...</div>
+            <div class="progress-track">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // ===== 状态 =====
+        const S = {
+            pdf: null,
+            pages: [],           // 所有页面图片 dataURL
+            selected: [],        // 选中的页面索引（按顺序）
+            outputW: 1242,
+            outputH: 1660,
+            layout: 1,
+            layoutCols: 1,
+            layoutRows: 1,
+            gap: 12,
+            bgColor: '#ffffff',
+            canvases: [],        // 生成的原始画布
+            texts: [],           // [{idx, text, x, y, font, size, color, bold, italic, bg, enableBg}]
+            isTextMode: false,
+            dragging: null,
+            dragOffset: { x: 0, y: 0 }
+        };
+
+        // ===== DOM =====
+        const $ = id => document.getElementById(id);
+        const D = {
+            uploadArea: $('uploadArea'),
+            fileInput: $('fileInput'),
+            fileInfo: $('fileInfo'),
+            sizeSection: $('sizeSection'),
+            layoutSection: $('layoutSection'),
+            pageSection: $('pageSection'),
+            textSection: $('textSection'),
+            exportSection: $('exportSection'),
+            sizePresets: $('sizePresets'),
+            customSizeRow: $('customSizeRow'),
+            customW: $('customW'),
+            customH: $('customH'),
+            layoutGrid: $('layoutGrid'),
+            gapRange: $('gapRange'),
+            gapVal: $('gapVal'),
+            bgColorPicker: $('bgColorPicker'),
+            bgColorText: $('bgColorText'),
+            pageGrid: $('pageGrid'),
+            selCount: $('selCount'),
+            generateBtn: $('generateBtn'),
+            outputWrapper: $('outputWrapper'),
+            placeholder: $('placeholder'),
+            targetCanvas: $('targetCanvas'),
+            textInput: $('textInput'),
+            fontSelect: $('fontSelect'),
+            fontSizeRange: $('fontSizeRange'),
+            fontSizeVal: $('fontSizeVal'),
+            fontColorPicker: $('fontColorPicker'),
+            fontColorText: $('fontColorText'),
+            textBgColorPicker: $('textBgColorPicker'),
+            textBgColorText: $('textBgColorText'),
+            enableTextBg: $('enableTextBg'),
+            boldCheck: $('boldCheck'),
+            italicCheck: $('italicCheck'),
+            addTextBtn: $('addTextBtn'),
+            textList: $('textList'),
+            clearTextBtn: $('clearTextBtn'),
+            editModeBar: $('editModeBar'),
+            loadingMask: $('loadingMask'),
+            loadingMsg: $('loadingMsg'),
+            progressBar: $('progressBar')
+        };
+
+        // ===== 初始化 =====
+        function init() {
+            // 上传
+            D.uploadArea.onclick = () => D.fileInput.click();
+            D.uploadArea.ondragover = e => { e.preventDefault(); D.uploadArea.style.borderColor = '#ff6b6b'; };
+            D.uploadArea.ondragleave = e => { e.preventDefault(); D.uploadArea.style.borderColor = '#ffcece'; };
+            D.uploadArea.ondrop = e => {
+                e.preventDefault();
+                D.uploadArea.style.borderColor = '#ffcece';
+                const f = e.dataTransfer.files[0];
+                if (f && f.type === 'application/pdf') loadPDF(f);
+            };
+            D.fileInput.onchange = e => e.target.files[0] && loadPDF(e.target.files[0]);
+
+            // 尺寸预设
+            D.sizePresets.querySelectorAll('.size-preset').forEach(btn => {
+                btn.onclick = () => {
+                    D.sizePresets.querySelectorAll('.size-preset').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const w = +btn.dataset.w, h = +btn.dataset.h;
+                    if (w === 0) {
+                        D.customSizeRow.classList.add('show');
+                        S.outputW = +D.customW.value || 1242;
+                        S.outputH = +D.customH.value || 1660;
+                    } else {
+                        D.customSizeRow.classList.remove('show');
+                        S.outputW = w;
+                        S.outputH = h;
+                    }
+                };
+            });
+            D.customW.oninput = () => S.outputW = +D.customW.value || 1242;
+            D.customH.oninput = () => S.outputH = +D.customH.value || 1660;
+
+            // 布局
+            D.layoutGrid.querySelectorAll('.layout-item').forEach(item => {
+                item.onclick = () => {
+                    D.layoutGrid.querySelectorAll('.layout-item').forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    S.layout = +item.dataset.layout;
+                    S.layoutCols = +item.dataset.cols;
+                    S.layoutRows = +item.dataset.rows;
+                };
+            });
+
+            // 间距
+            D.gapRange.oninput = () => {
+                S.gap = +D.gapRange.value;
+                D.gapVal.textContent = S.gap + 'px';
+            };
+
+            // 背景色
+            D.bgColorPicker.oninput = () => {
+                S.bgColor = D.bgColorPicker.value;
+                D.bgColorText.value = S.bgColor;
+            };
+            D.bgColorText.oninput = () => {
+                if (/^#[0-9A-Fa-f]{6}$/.test(D.bgColorText.value)) {
+                    D.bgColorPicker.value = D.bgColorText.value;
+                    S.bgColor = D.bgColorText.value;
+                }
+            };
+
+            // 页面选择
+            $('selAllBtn').onclick = () => {
+                S.selected = S.pages.map((_, i) => i);
+                renderPageGrid();
+            };
+            $('clearSelBtn').onclick = () => {
+                S.selected = [];
+                renderPageGrid();
+            };
+
+            // 生成
+            D.generateBtn.onclick = generateOutput;
+
+            // 文字颜色
+            D.fontSizeRange.oninput = () => D.fontSizeVal.textContent = D.fontSizeRange.value + 'px';
+            D.fontColorPicker.oninput = () => D.fontColorText.value = D.fontColorPicker.value;
+            D.fontColorText.oninput = () => {
+                if (/^#[0-9A-Fa-f]{6}$/.test(D.fontColorText.value)) D.fontColorPicker.value = D.fontColorText.value;
+            };
+            D.textBgColorPicker.oninput = () => D.textBgColorText.value = D.textBgColorPicker.value;
+            D.textBgColorText.oninput = () => {
+                if (/^#[0-9A-Fa-f]{6}$/.test(D.textBgColorText.value)) D.textBgColorPicker.value = D.textBgColorText.value;
+            };
+
+            // 添加文字模式
+            D.addTextBtn.onclick = toggleTextMode;
+
+            // 清除文字
+            D.clearTextBtn.onclick = () => {
+                const idx = +D.targetCanvas.value;
+                S.texts = S.texts.filter(t => t.idx !== idx);
+                redrawCanvas(idx);
+                renderTextList();
+            };
+
+            // 导出
+            $('dlPngBtn').onclick = () => downloadAll('png');
+            $('dlJpgBtn').onclick = () => downloadAll('jpeg');
+            $('resetBtn').onclick = resetAll;
+
+            // ESC 取消文字模式
+            document.onkeydown = e => {
+                if (e.key === 'Escape' && S.isTextMode) toggleTextMode();
+            };
+        }
+
+        // ===== 加载 PDF =====
+        async function loadPDF(file) {
+            showLoading(true, '加载 PDF...');
+            try {
+                const data = await file.arrayBuffer();
+                S.pdf = await pdfjsLib.getDocument({ data }).promise;
+                S.pages = [];
+                S.selected = [];
+                S.canvases = [];
+                S.texts = [];
+
+                const total = S.pdf.numPages;
+                for (let i = 1; i <= total; i++) {
+                    setProgress((i / total) * 100, `渲染第 ${i}/${total} 页`);
+                    const page = await S.pdf.getPage(i);
+                    const vp = page.getViewport({ scale: 2 });
+                    const cvs = document.createElement('canvas');
+                    cvs.width = vp.width;
+                    cvs.height = vp.height;
+                    await page.render({ canvasContext: cvs.getContext('2d'), viewport: vp }).promise;
+                    S.pages.push(cvs.toDataURL('image/png'));
+                }
+
+                D.fileInfo.style.display = 'block';
+                D.fileInfo.textContent = `✅ ${file.name} (${total} 页)`;
+
+                D.sizeSection.style.display = 'block';
+                D.layoutSection.style.display = 'block';
+                D.pageSection.style.display = 'block';
+                D.placeholder.style.display = 'none';
+
+                setStep(2);
+                renderPageGrid();
+            } catch (err) {
+                console.error(err);
+                alert('PDF 加载失败，请检查文件');
+            }
+            showLoading(false);
+        }
+
+        // ===== 渲染页面网格 =====
+        function renderPageGrid() {
+            D.pageGrid.innerHTML = S.pages.map((src, i) => {
+                const order = S.selected.indexOf(i);
+                return `
+                    <div class="page-thumb ${order > -1 ? 'selected' : ''}" data-i="${i}">
+                        <img src="${src}" alt="Page ${i+1}">
+                        <span class="page-num">${i + 1}</span>
+                        ${order > -1 ? `<span class="page-order">${order + 1}</span>` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            D.pageGrid.querySelectorAll('.page-thumb').forEach(el => {
+                el.onclick = () => {
+                    const i = +el.dataset.i;
+                    const pos = S.selected.indexOf(i);
+                    if (pos > -1) S.selected.splice(pos, 1);
+                    else S.selected.push(i);
+                    renderPageGrid();
+                };
+            });
+
+            D.selCount.textContent = `(${S.selected.length}/${S.pages.length})`;
+            D.generateBtn.disabled = S.selected.length === 0;
+        }
+
+        // ===== 生成输出图片 =====
+        async function generateOutput() {
+            if (S.selected.length === 0) return alert('请选择页面');
+
+            showLoading(true, '生成图片...');
+            S.canvases = [];
+            S.texts = [];
+            D.outputWrapper.innerHTML = '';
+
+            const { layout, layoutCols: cols, layoutRows: rows, gap, outputW: W, outputH: H, bgColor } = S;
+            const cellW = (W - gap * (cols + 1)) / cols;
+            const cellH = (H - gap * (rows + 1)) / rows;
+
+            const selectedSrcs = S.selected.map(i => S.pages[i]);
+            const totalOutputs = Math.ceil(selectedSrcs.length / layout);
+
+            for (let outIdx = 0; outIdx < totalOutputs; outIdx++) {
+                setProgress(((outIdx + 1) / totalOutputs) * 100);
+
+                const cvs = document.createElement('canvas');
+                cvs.width = W;
+                cvs.height = H;
+                const ctx = cvs.getContext('2d');
+
+                // 背景
+                ctx.fillStyle = bgColor;
+                ctx.fillRect(0, 0, W, H);
+
+                // 绘制页面
+                for (let slot = 0; slot < layout; slot++) {
+                    const pageIdx = outIdx * layout + slot;
+                    if (pageIdx >= selectedSrcs.length) break;
+
+                    const col = slot % cols;
+                    const row = Math.floor(slot / cols);
+                    const x = gap + col * (cellW + gap);
+                    const y = gap + row * (cellH + gap);
+
+                    const img = await loadImg(selectedSrcs[pageIdx]);
+                    const scale = Math.min(cellW / img.width, cellH / img.height);
+                    const dw = img.width * scale;
+                    const dh = img.height * scale;
+                    const dx = x + (cellW - dw) / 2;
+                    const dy = y + (cellH - dh) / 2;
+
+                    ctx.drawImage(img, dx, dy, dw, dh);
+                }
+
+                S.canvases.push(cvs);
+
+                // 创建显示元素
+                const wrap = document.createElement('div');
+                wrap.className = 'output-item';
+                wrap.innerHTML = `
+                    <div class="canvas-wrap">
+                        <canvas class="output-canvas" data-idx="${outIdx}" width="${W}" height="${H}"></canvas>
+                    </div>
+                    <div class="output-label">图片 ${outIdx + 1} / ${totalOutputs}</div>
+                `;
+                D.outputWrapper.appendChild(wrap);
+
+                const displayCvs = wrap.querySelector('canvas');
+                displayCvs.getContext('2d').drawImage(cvs, 0, 0);
+
+                // 事件
+                displayCvs.onclick = e => handleCanvasClick(e, outIdx);
+                displayCvs.onmousedown = e => handleMouseDown(e, outIdx);
+                displayCvs.onmousemove = e => handleMouseMove(e, outIdx);
+                displayCvs.onmouseup = handleMouseUp;
+                displayCvs.onmouseleave = handleMouseUp;
+            }
+
+            // 更新目标选择
+            D.targetCanvas.innerHTML = S.canvases.map((_, i) => `<option value="${i}">图片 ${i + 1}</option>`).join('');
+
+            D.textSection.style.display = 'block';
+            D.exportSection.style.display = 'block';
+            setStep(4);
+            showLoading(false);
+        }
+
+        // ===== 文字模式 =====
+        function toggleTextMode() {
+            S.isTextMode = !S.isTextMode;
+            D.editModeBar.classList.toggle('active', S.isTextMode);
+            D.addTextBtn.textContent = S.isTextMode ? '❌ 取消添加' : '✏️ 点击图片添加文字';
+
+            D.outputWrapper.querySelectorAll('.output-canvas').forEach(c => {
+                c.style.cursor = S.isTextMode ? 'crosshair' : 'default';
+            });
+        }
+
+        // ===== 画布点击 =====
+        function handleCanvasClick(e, idx) {
+            if (!S.isTextMode) return;
+
+            const text = D.textInput.value.trim();
+            if (!text) return alert('请输入文字内容');
+
+            const cvs = e.target;
+            const rect = cvs.getBoundingClientRect();
+            const scaleX = cvs.width / rect.width;
+            const scaleY = cvs.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+
+            S.texts.push({
+                idx,
+                text,
+                x,
+                y,
+                font: D.fontSelect.value,
+                size: +D.fontSizeRange.value,
+                color: D.fontColorPicker.value,
+                bold: D.boldCheck.checked,
+                italic: D.italicCheck.checked,
+                bg: D.textBgColorPicker.value,
+                enableBg: D.enableTextBg.checked
+            });
+
+            redrawCanvas(idx);
+            renderTextList();
+            toggleTextMode();
+        }
+
+        // ===== 拖动文字 =====
+        function handleMouseDown(e, idx) {
+            if (S.isTextMode) return;
+
+            const cvs = e.target;
+            const rect = cvs.getBoundingClientRect();
+            const scaleX = cvs.width / rect.width;
+            const scaleY = cvs.height / rect.height;
+            const mx = (e.clientX - rect.left) * scaleX;
+            const my = (e.clientY - rect.top) * scaleY;
+
+            // 查找点击的文字（从后往前）
+            const canvasTexts = S.texts.filter(t => t.idx === idx);
+            for (let i = canvasTexts.length - 1; i >= 0; i--) {
+                const t = canvasTexts[i];
+                if (t.bounds && isInBounds(mx, my, t.bounds)) {
+                    S.dragging = t;
+                    S.dragOffset = { x: mx - t.x, y: my - t.y };
+                    cvs.style.cursor = 'move';
+                    return;
+                }
+            }
+        }
+
+        function handleMouseMove(e, idx) {
+            if (!S.dragging || S.dragging.idx !== idx) return;
+
+            const cvs = e.target;
+            const rect = cvs.getBoundingClientRect();
+            const scaleX = cvs.width / rect.width;
+            const scaleY = cvs.height / rect.height;
+            const mx = (e.clientX - rect.left) * scaleX;
+            const my = (e.clientY - rect.top) * scaleY;
+
+            S.dragging.x = mx - S.dragOffset.x;
+            S.dragging.y = my - S.dragOffset.y;
+            redrawCanvas(idx);
+        }
+
+        function handleMouseUp(e) {
+            if (S.dragging) {
+                e.target.style.cursor = S.isTextMode ? 'crosshair' : 'default';
+                S.dragging = null;
+            }
+        }
+
+        function isInBounds(x, y, b) {
+            return x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
+        }
+
+        // ===== 重绘画布 =====
+        function redrawCanvas(idx) {
+            const srcCvs = S.canvases[idx];
+            const displayCvs = D.outputWrapper.querySelectorAll('.output-canvas')[idx];
+            const ctx = displayCvs.getContext('2d');
+
+            ctx.clearRect(0, 0, displayCvs.width, displayCvs.height);
+            ctx.drawImage(srcCvs, 0, 0);
+
+            S.texts.filter(t => t.idx === idx).forEach(t => {
+                drawText(ctx, t);
+            });
+        }
+
+        // ===== 绘制文字 =====
+        function drawText(ctx, t) {
+            const fontStr = `${t.italic ? 'italic ' : ''}${t.bold ? 'bold ' : ''}${t.size}px "${t.font}"`;
+            ctx.font = fontStr;
+
+            const lines = t.text.split('\n');
+            const lineH = t.size * 1.25;
+
+            let maxW = 0;
+            lines.forEach(line => {
+                const w = ctx.measureText(line).width;
+                if (w > maxW) maxW = w;
+            });
+
+            const totalH = lines.length * lineH;
+            const padding = 6;
+
+            // 保存边界用于拖动
+            t.bounds = {
+                x: t.x - padding,
+                y: t.y - t.size - padding,
+                w: maxW + padding * 2,
+                h: totalH + padding * 2
+            };
+
+            // 背景
+            if (t.enableBg) {
+                ctx.fillStyle = t.bg;
+                ctx.fillRect(t.bounds.x, t.bounds.y, t.bounds.w, t.bounds.h);
+            }
+
+            // 文字
+            ctx.fillStyle = t.color;
+            ctx.font = fontStr;
+            lines.forEach((line, i) => {
+                ctx.fillText(line, t.x, t.y + i * lineH);
+            });
+        }
+
+        // ===== 渲染文字列表 =====
+        function renderTextList() {
+            const idx = +D.targetCanvas.value;
+            const list = S.texts.filter(t => t.idx === idx);
+
+            if (list.length === 0) {
+                D.textList.innerHTML = '<div style="color:#aaa;font-size:10px;text-align:center;padding:10px;">暂无文字</div>';
+                return;
+            }
+
+            D.textList.innerHTML = list.map((t, i) => {
+                const globalIdx = S.texts.indexOf(t);
+                const preview = t.text.length > 12 ? t.text.substring(0, 12) + '...' : t.text;
+                return `
+                    <div class="text-entry">
+                        <span class="text-entry-content" style="color:${t.color};font-family:${t.font};">${preview}</span>
+                        <button class="text-entry-btn" onclick="deleteText(${globalIdx})">删除</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 目标画布切换时更新列表
+        D.targetCanvas.onchange = renderTextList;
+
+        // ===== 删除文字 =====
+        window.deleteText = function(globalIdx) {
+            const t = S.texts[globalIdx];
+            const idx = t.idx;
+            S.texts.splice(globalIdx, 1);
+            redrawCanvas(idx);
+            renderTextList();
+        };
+
+        // ===== 下载 =====
+        function downloadAll(format) {
+            S.canvases.forEach((srcCvs, idx) => {
+                const finalCvs = document.createElement('canvas');
+                finalCvs.width = srcCvs.width;
+                finalCvs.height = srcCvs.height;
+                const ctx = finalCvs.getContext('2d');
+
+                // JPG 需要白色背景
+                if (format === 'jpeg') {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, finalCvs.width, finalCvs.height);
+                }
+
+                ctx.drawImage(srcCvs, 0, 0);
+
+                // 绘制文字
+                S.texts.filter(t => t.idx === idx).forEach(t => drawText(ctx, t));
+
+                const link = document.createElement('a');
+                link.download = `xiaohongshu_${idx + 1}.${format === 'jpeg' ? 'jpg' : 'png'}`;
+                link.href = finalCvs.toDataURL(`image/${format}`, 0.95);
+                link.click();
+            });
+
+            setStep(5);
+        }
+
+        // ===== 重置 =====
+        function resetAll() {
+            S.pdf = null;
+            S.pages = [];
+            S.selected = [];
+            S.canvases = [];
+            S.texts = [];
+            S.isTextMode = false;
+            S.dragging = null;
+
+            D.fileInput.value = '';
+            D.fileInfo.style.display = 'none';
+            D.sizeSection.style.display = 'none';
+            D.layoutSection.style.display = 'none';
+            D.pageSection.style.display = 'none';
+            D.textSection.style.display = 'none';
+            D.exportSection.style.display = 'none';
+            D.placeholder.style.display = 'flex';
+            D.outputWrapper.innerHTML = '';
+            D.editModeBar.classList.remove('active');
+            D.textList.innerHTML = '<div style="color:#aaa;font-size:10px;text-align:center;padding:10px;">暂无文字</div>';
+
+            setStep(1);
+        }
+
+        // ===== 工具函数 =====
+        function loadImg(src) {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.src = src;
+            });
+        }
+
+        function showLoading(show, msg = '处理中...') {
+            D.loadingMask.classList.toggle('active', show);
+            D.loadingMsg.textContent = msg;
+            if (!show) D.progressBar.style.width = '0%';
+        }
+
+        function setProgress(pct, msg) {
+            D.progressBar.style.width = pct + '%';
+            if (msg) D.loadingMsg.textContent = msg;
+        }
+
+        function setStep(n) {
+            for (let i = 1; i <= 5; i++) {
+                const el = $('step' + i);
+                el.classList.remove('active', 'done');
+                if (i < n) el.classList.add('done');
+                else if (i === n) el.classList.add('active');
+            }
+        }
+
+        // ===== 启动 =====
+        init();
+    </script>
+</body>
+</html>
